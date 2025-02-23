@@ -22,14 +22,12 @@ export async function POST(request: Request) {
     const aiResponse = await fal.subscribe('fal-ai/any-llm', {
       input: {
         prompt: `
-            You are an AI that extracts structured knowledge from Markdown.
-            - Convert the given cleaned Markdown into structured learning nuggets.
-            - Each nugget should contain:
-              - A title summarizing the key concept.
-              - A concise explanation (max 40 words).
-              - If applicable, extract code snippets.
-              - If images are referenced, include the image URL.
-            - Format the output as a valid JSON array with the structure:
+            You are an AI that extracts **only meaningful knowledge nuggets** from Markdown. 
+            - **IGNORE**: Website navigation, social media buttons, author bios, ads, and unrelated content.
+            - Extract key insights from the **main body** of the article only.
+            - If an image is part of the article's content, include its URL.
+            - Maintain the logical sequence of ideas.
+            - Format the output as a JSON array:
             [
               {
                 "id": <number>,
@@ -40,8 +38,11 @@ export async function POST(request: Request) {
               }
             ]
 
-            Input Markdown:
+            ### Example Input (Markdown):
             ${markdown}
+
+            ### Expected Output:
+            Only return **meaningful knowledge cards** without website navigation, author info, or social buttons.
           `,
       },
       logs: true,
