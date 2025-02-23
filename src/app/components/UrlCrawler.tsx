@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 interface CrawlResponse {
   content: {
@@ -168,35 +169,14 @@ export default function UrlCrawler() {
         </div>
       )}
 
-      {content && content.content.success && (
-        <div className="prose dark:prose-invert max-w-none space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Crawled URL: <span className="text-sm font-normal break-all">{content.content.url}</span></h3>
-            <button
-              onClick={() => setShowRawContent(!showRawContent)}
-              className="px-4 py-2 text-sm border border-foreground/20 rounded-md hover:bg-foreground/5 transition-colors"
-            >
-              {showRawContent ? 'Hide Raw Content' : 'Show Raw Content'}
-            </button>
-          </div>
-
-          {showRawContent && (
-            <div className="p-4 bg-black/[.05] dark:bg-white/[.06] rounded-md">
-              <h3 className="text-lg font-semibold mb-2">Raw Content</h3>
-              <div className="text-sm whitespace-pre-wrap overflow-auto max-h-[500px]">
-                {content.content.markdown}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {nuggets.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {nuggets.map((nugget) => (
             <div key={nugget.id} className="p-4 bg-black/[.05] dark:bg-white/[.06] rounded-md hover:bg-black/[.08] dark:hover:bg-white/[.09] transition-colors">
               <h3 className="text-lg font-semibold mb-2">{nugget.title}</h3>
-              <p className="text-sm mb-4">{nugget.content}</p>
+              <div className="text-sm mb-4 prose dark:prose-invert max-w-none prose-sm">
+                <ReactMarkdown>{nugget.content}</ReactMarkdown>
+              </div>
               {nugget.code_snippet && (
                 <div className="bg-black/[.1] dark:bg-black/[.3] p-3 rounded-md mb-4 overflow-x-auto">
                   <pre className="text-xs">
