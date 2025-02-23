@@ -40,50 +40,16 @@ export default function UrlCrawler() {
   const [error, setError] = useState('');
   const [cleaning, setCleaning] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [showRawContent, setShowRawContent] = useState(false);
+  const [progress, setProgress] = useState<string>('');
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setContent(null);
-    setCleanedContent(null);
-    setNuggets([]);
-
-    try {
-      const response = await fetch('/api/crawl', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to crawl URL');
-      }
-
-      if (!data.content.success) {
-        throw new Error('Failed to crawl URL');
-      }
-
-      setContent(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to crawl URL');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClean = async () => {
-    if (!content?.content.markdown) return;
-    
+  const handleClean = async (crawledContent: CrawlResponse) => {
     setCleaning(true);
+    setProgress('Cleaning and processing content...');
     setError('');
 
     try {
@@ -92,7 +58,7 @@ export default function UrlCrawler() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ markdown: content.content.markdown }),
+        body: JSON.stringify({ markdown: crawledContent.content.markdown }),
       });
 
       const data = await response.json();
@@ -118,6 +84,45 @@ export default function UrlCrawler() {
       setError(err instanceof Error ? err.message : 'Failed to clean content');
     } finally {
       setCleaning(false);
+      setProgress('');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setContent(null);
+    setCleanedContent(null);
+    setNuggets([]);
+    setProgress('Crawling URL...');
+
+    try {
+      const response = await fetch('/api/crawl', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to crawl URL');
+      }
+
+      if (!data.content.success) {
+        throw new Error('Failed to crawl URL');
+      }
+
+      setContent(data);
+      await handleClean(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to crawl URL');
+    } finally {
+      setLoading(false);
+      setProgress('');
     }
   };
 
@@ -130,7 +135,7 @@ export default function UrlCrawler() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="url" className="block text-sm font-medium mb-2">
-            Enter URL to crawl
+            Enter URL
           </label>
           <input
             type="url"
@@ -144,12 +149,18 @@ export default function UrlCrawler() {
         </div>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || cleaning}
           className="w-full px-4 py-2 bg-foreground text-background rounded-md hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {loading ? 'Crawling...' : 'Crawl URL'}
+          Process
         </button>
       </form>
+
+      {(loading || cleaning) && progress && (
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md">
+          {progress}
+        </div>
+      )}
 
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md">
@@ -159,25 +170,24 @@ export default function UrlCrawler() {
 
       {content && content.content.success && (
         <div className="prose dark:prose-invert max-w-none space-y-4">
-          <div className="p-4 bg-black/[.05] dark:bg-white/[.06] rounded-md">
-            <h3 className="text-lg font-semibold mb-2">Crawled URL</h3>
-            <p className="text-sm break-all">{content.content.url}</p>
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Crawled URL: <span className="text-sm font-normal break-all">{content.content.url}</span></h3>
+            <button
+              onClick={() => setShowRawContent(!showRawContent)}
+              className="px-4 py-2 text-sm border border-foreground/20 rounded-md hover:bg-foreground/5 transition-colors"
+            >
+              {showRawContent ? 'Hide Raw Content' : 'Show Raw Content'}
+            </button>
           </div>
-          <div className="p-4 bg-black/[.05] dark:bg-white/[.06] rounded-md">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-semibold">Raw Content</h3>
-              <button
-                onClick={handleClean}
-                disabled={cleaning}
-                className="px-4 py-2 bg-foreground text-background rounded-md hover:opacity-90 disabled:opacity-50 transition-opacity text-sm"
-              >
-                {cleaning ? 'Cleaning...' : 'Clean Content'}
-              </button>
+
+          {showRawContent && (
+            <div className="p-4 bg-black/[.05] dark:bg-white/[.06] rounded-md">
+              <h3 className="text-lg font-semibold mb-2">Raw Content</h3>
+              <div className="text-sm whitespace-pre-wrap overflow-auto max-h-[500px]">
+                {content.content.markdown}
+              </div>
             </div>
-            <div className="text-sm whitespace-pre-wrap overflow-auto max-h-[500px]">
-              {content.content.markdown}
-            </div>
-          </div>
+          )}
         </div>
       )}
 
