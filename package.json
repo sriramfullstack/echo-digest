@@ -12,10 +12,12 @@
     "@fal-ai/client": "^1.2.3",
     "@fal-ai/server-proxy": "^1.1.1",
     "ai": "^4.1.45",
+    "motion": "^12.4.7",
     "next": "15.1.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-markdown": "^10.0.0"
+    "react-markdown": "^10.0.0",
+    "react-swipeable": "^7.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
