@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EchoDigest
+
+EchoDigest is a web application that helps users digest online content more effectively by crawling web pages and generating concise, easy-to-understand summaries. The project combines a Next.js frontend with a Python FastAPI backend for web crawling capabilities.
+
+## Project Architecture
+
+- **Frontend**: Next.js application with React 19
+- **Backend**: Python FastAPI service for web crawling
+- **Key Features**:
+  - Web page crawling and content extraction
+  - AI-powered content summarization
+  - Modern, responsive user interface
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18 or higher
+- Python 3.8 or higher
+- npm or yarn package manager
+
+### Installation
+
+1. Clone the repository
+
+2. Install frontend dependencies:
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Install backend dependencies:
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+### Running the Application
+
+1. Start the frontend development server:
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Start the backend server:
+```bash
+cd backend
+python app.py
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The frontend will be available at [http://localhost:3000](http://localhost:3000), and the backend API will run on [http://localhost:8000](http://localhost:8000).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
 
-## Learn More
+### Frontend (Next.js)
 
-To learn more about Next.js, take a look at the following resources:
+The frontend is built with Next.js and uses:
+- React 19 for UI components
+- Tailwind CSS for styling
+- TypeScript for type safety
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Key frontend files:
+- `src/app/page.tsx`: Main application page
+- `src/app/components/`: React components
+- `src/app/api/`: API route handlers
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Backend (FastAPI)
 
-## Deploy on Vercel
+The Python backend handles web crawling and content processing:
+- FastAPI for the REST API
+- Beautiful Soup for web scraping
+- AI models for content summarization
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Environment Configuration
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Create a `.env` file in the root directory with the following variables:
+```env
+# Add your environment variables here
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
