@@ -1,0 +1,13 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Large hexagon representing complex information -->
+  <path d="M30 90L60 40L120 40L150 90L120 140L60 140L30 90Z" stroke="currentColor" stroke-width="4" fill="currentColor" fill-opacity="0.1"/>
+  
+  <!-- Flowing connection lines -->
+  <path d="M120 90C140 90 150 70 130 60C110 50 100 80 120 90Z" stroke="currentColor" stroke-width="3" fill="currentColor" fill-opacity="0.15"/>
+  <path d="M120 90C140 90 150 110 130 120C110 130 100 100 120 90Z" stroke="currentColor" stroke-width="3" fill="currentColor" fill-opacity="0.15"/>
+  
+  <!-- Small organized nuggets -->
+  <rect x="140" y="50" width="20" height="20" rx="4" stroke="currentColor" stroke-width="3" fill="currentColor" fill-opacity="0.2"/>
+  <rect x="140" y="80" width="20" height="20" rx="4" stroke="currentColor" stroke-width="3" fill="currentColor" fill-opacity="0.2"/>
+  <rect x="140" y="110" width="20" height="20" rx="4" stroke="currentColor" stroke-width="3" fill="currentColor" fill-opacity="0.2"/>
+</svg>
