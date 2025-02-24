@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSwipeable } from 'react-swipeable';
 
 interface CrawlResponse {
   content: {
@@ -12,14 +11,6 @@ interface CrawlResponse {
     markdown: string;
     success: boolean;
   };
-}
-
-interface LearningNugget {
-  id: number;
-  title: string;
-  content: string;
-  code_snippet: string | null;
-  image_url: string | null;
 }
 
 interface CleanResponse {
@@ -34,6 +25,15 @@ interface CleanResponse {
   };
 }
 
+interface LearningNugget {
+  id: number;
+  title: string;
+  content: string;
+  code_snippet: string | null;
+  image_url: string | null;
+  audio_description: string;
+}
+
 export default function UrlCrawler() {
   const [url, setUrl] = useState('');
   const [content, setContent] = useState<CrawlResponse | null>(null);
@@ -45,26 +45,106 @@ export default function UrlCrawler() {
   const [isClient, setIsClient] = useState(false);
   const [showRawContent, setShowRawContent] = useState(false);
   const [progress, setProgress] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'list' | 'stacked'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'stacked'>('stacked');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const handlers = useSwipeable({
-    onSwipedLeft: () => {
-      if (viewMode === 'stacked' && currentIndex < nuggets.length - 1) {
-        setCurrentIndex(prev => prev + 1);
-      }
-    },
-    onSwipedRight: () => {
-      if (viewMode === 'stacked' && currentIndex > 0) {
-        setCurrentIndex(prev => prev - 1);
-      }
-    },
-    preventScrollOnSwipe: true,
-    trackMouse: true
-  });
+  const [isPlaying, setIsPlaying] = useState<number | null>(null);
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
+  const [autoPlayTimeout, setAutoPlayTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setIsClient(true);
+    
+    // Set default view mode based on screen size
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setViewMode('stacked');
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+  
+  const playAudio = async (nuggetId: number, description: string, autoPlay = false) => {
+    if (isPlaying === nuggetId) {
+      audioElement?.pause();
+      setIsPlaying(null);
+      setAutoPlayEnabled(false);
+      if (autoPlayTimeout) {
+        clearTimeout(autoPlayTimeout);
+        setAutoPlayTimeout(null);
+      }
+      return;
+    }
+
+    try {
+      audioElement?.pause();
+      const response = await fetch('/api/audio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: description }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate audio');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        setIsPlaying(null);
+        if (autoPlay) {
+          if (currentIndex < nuggets.length - 1) {
+            const nextIndex = currentIndex + 1;
+            setCurrentIndex(nextIndex);
+            const timeout = setTimeout(() => {
+              playAudio(nuggets[nextIndex].id, nuggets[nextIndex].audio_description, true);
+            }, 2000);
+            setAutoPlayTimeout(timeout);
+          } else {
+            setAutoPlayEnabled(false);
+          }
+        }
+      };
+
+      setAudioElement(audio);
+      audio.play();
+      setIsPlaying(nuggetId);
+      if (autoPlay) {
+        setAutoPlayEnabled(true);
+      }
+    } catch (err) {
+      console.error('Failed to play audio:', err);
+      setError('Failed to play audio');
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      audioElement?.pause();
+      if (autoPlayTimeout) {
+        clearTimeout(autoPlayTimeout);
+      }
+    };
+  }, [autoPlayTimeout, audioElement]);
+
+  const handleManualNavigation = () => {
+    setAutoPlayEnabled(false);
+    if (autoPlayTimeout) {
+      clearTimeout(autoPlayTimeout);
+      setAutoPlayTimeout(null);
+    }
+    audioElement?.pause();
+    setIsPlaying(null);
+  };
+
 
   const handleClean = async (crawledContent: CrawlResponse) => {
     setCleaning(true);
@@ -146,7 +226,7 @@ export default function UrlCrawler() {
   };
 
   if (!isClient) {
-    return <div className="w-full max-w-3xl mx-auto p-4 space-y-6"></div>;
+    return null;
   }
 
   return (
@@ -171,7 +251,7 @@ export default function UrlCrawler() {
           disabled={loading || cleaning}
           className="w-full px-4 py-2 bg-foreground text-background rounded-md hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          Process
+          Digest Now
         </button>
       </form>
 
@@ -192,15 +272,28 @@ export default function UrlCrawler() {
           <div className="flex justify-end space-x-2">
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1 rounded-md transition-colors ${viewMode === 'list' ? 'bg-foreground text-background' : 'bg-black/[.05] dark:bg-white/[.06]'}`}
+              className={`px-3 py-1 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'list' ? 'bg-foreground text-background' : 'bg-black/[.05] dark:bg-white/[.06]'}`}
             >
-              List View
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              <span className="hidden sm:inline">List View</span>
             </button>
             <button
               onClick={() => setViewMode('stacked')}
-              className={`px-3 py-1 rounded-md transition-colors ${viewMode === 'stacked' ? 'bg-foreground text-background' : 'bg-black/[.05] dark:bg-white/[.06]'}`}
+              className={`px-3 py-1 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'stacked' ? 'bg-foreground text-background' : 'bg-black/[.05] dark:bg-white/[.06]'}`}
             >
-              Stacked View
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="3" y1="15" x2="21" y2="15"></line>
+              </svg>
+              <span className="hidden sm:inline">Stacked View</span>
             </button>
           </div>
 
@@ -220,10 +313,10 @@ export default function UrlCrawler() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="p-4 bg-black/[.05] dark:bg-white/[.06] rounded-md hover:bg-black/[.08] dark:hover:bg-white/[.09] transition-colors flex flex-col"
+                    className="p-4 bg-black/[.05] dark:bg-white/[.06] rounded-md hover:bg-black/[.08] dark:hover:bg-white/[.09] transition-colors"
                   >
                     <h3 className="text-lg font-semibold mb-2">{nugget.title}</h3>
-                    <div className="text-sm mb-4 prose dark:prose-invert max-w-none prose-sm flex-grow">
+                    <div className="text-sm mb-4 prose dark:prose-invert max-w-none prose-sm">
                       <ReactMarkdown>{nugget.content}</ReactMarkdown>
                     </div>
                     {nugget.code_snippet && (
@@ -237,14 +330,20 @@ export default function UrlCrawler() {
                       <img
                         src={nugget.image_url}
                         alt={nugget.title}
-                        className="w-full h-auto rounded-md"
+                        className="w-full h-auto rounded-md mb-4"
                       />
                     )}
+                    <button
+                      onClick={() => playAudio(nugget.id, nugget.audio_description)}
+                      className={`flex items-center px-3 py-1 rounded-md text-sm ${isPlaying === nugget.id ? 'bg-foreground text-background' : 'bg-black/[.05] dark:bg-white/[.06] hover:bg-black/[.08] dark:hover:bg-white/[.09]'}`}
+                    >
+                      {isPlaying === nugget.id ? 'Stop' : 'Play Audio'}
+                    </button>
                   </motion.div>
                 ))}
               </motion.div>
             ) : (
-              <div {...handlers} className="relative w-full">
+              <div className="relative w-full">
                 <AnimatePresence initial={false} mode="wait">
                   <motion.div
                     key={nuggets[currentIndex].id}
@@ -275,13 +374,36 @@ export default function UrlCrawler() {
                           />
                         </div>
                       )}
+                      <div className="flex items-center justify-between mt-4">
+                        {!autoPlayEnabled && (
+                          <button
+                            onClick={() => playAudio(nuggets[currentIndex].id, nuggets[currentIndex].audio_description)}
+                            className={`flex items-center px-3 py-1 rounded-md text-sm ${isPlaying === nuggets[currentIndex].id ? 'bg-foreground text-background' : 'bg-black/[.05] dark:bg-white/[.06] hover:bg-black/[.08] dark:hover:bg-white/[.09]'}`}
+                          >
+                            {isPlaying === nuggets[currentIndex].id ? 'Stop' : 'Play Audio'}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (autoPlayEnabled) {
+                              handleManualNavigation();
+                            } else {
+                              setAutoPlayEnabled(true);
+                              playAudio(nuggets[currentIndex].id, nuggets[currentIndex].audio_description, true);
+                            }
+                          }}
+                          className={`flex items-center px-3 py-1 rounded-md text-sm ${autoPlayEnabled ? 'bg-foreground text-background' : 'bg-black/[.05] dark:bg-white/[.06] hover:bg-black/[.08] dark:hover:bg-white/[.09]'}`}
+                        >
+                          {autoPlayEnabled ? 'Stop Auto-Play' : 'Start Auto-Play'}
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 </AnimatePresence>
                 <div className="fixed bottom-4 left-0 right-0 flex flex-col items-center justify-center space-y-2 bg-gradient-to-t from-background/80 to-transparent py-4">
                   <div className="flex items-center justify-center space-x-2">
                     <button 
-                      onClick={() => currentIndex > 0 && setCurrentIndex(prev => prev - 1)}
+                      onClick={() => currentIndex > 0 && (handleManualNavigation(), setCurrentIndex(prev => prev - 1))}
                       className={`p-2 rounded-full ${currentIndex > 0 ? 'text-foreground hover:bg-foreground/10' : 'text-foreground/30'}`}
                       disabled={currentIndex === 0}
                     >
@@ -289,7 +411,7 @@ export default function UrlCrawler() {
                     </button>
                     <span className="text-sm font-medium text-foreground/70">{currentIndex + 1} / {nuggets.length}</span>
                     <button 
-                      onClick={() => currentIndex < nuggets.length - 1 && setCurrentIndex(prev => prev + 1)}
+                      onClick={() => currentIndex < nuggets.length - 1 && (handleManualNavigation(), setCurrentIndex(prev => prev + 1))}
                       className={`p-2 rounded-full ${currentIndex < nuggets.length - 1 ? 'text-foreground hover:bg-foreground/10' : 'text-foreground/30'}`}
                       disabled={currentIndex === nuggets.length - 1}
                     >
